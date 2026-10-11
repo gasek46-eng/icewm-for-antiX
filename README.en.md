@@ -5,7 +5,7 @@
 Fixes and tools for macOS-style IceWM on antiX Linux.
 
 - [fix-icewm-buttons.sh](#fix-icewm-buttonssh--black-bar-under-the-window-buttons): removes the black bar under the window buttons
-- [brightness/](#brightness--brightness-button): a button with a screen brightness slider
+- [brightness/](brightness/README.en.md): a brightness slider button and everything about screen brightness
 - [BROWSER.en.md](BROWSER.en.md): which browser to install so it doesn't eat all your RAM
 
 ## fix-icewm-buttons.sh — black bar under the window buttons

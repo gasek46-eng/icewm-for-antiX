@@ -5,7 +5,7 @@
 Исправления и утилиты для IceWM в стиле macOS на antiX Linux.
 
 - [fix-icewm-buttons.sh](#fix-icewm-buttonssh--чёрная-полоса-под-кнопками-окна): убирает чёрную полосу под кнопками окна
-- [brightness/](#brightness--кнопка-яркости): кнопка с ползунком яркости экрана
+- [brightness/](brightness/README.md): кнопка с ползунком яркости и всё про яркость экрана
 - [BROWSER.md](BROWSER.md): какой браузер поставить, чтобы не забивал память
 
 ## fix-icewm-buttons.sh — чёрная полоса под кнопками окна
