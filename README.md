@@ -1,5 +1,7 @@
 # IceWM for antiX
 
+**Русский** | [English](README.en.md)
+
 Исправления для тем IceWM в стиле macOS на antiX Linux.
 
 ## fix-icewm-buttons.sh — чёрная полоса под кнопками окна
