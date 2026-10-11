@@ -1,0 +1,229 @@
+#!/usr/bin/env bash
+# orchard-ctl — управление темой Orchard (antiX + IceWM в стиле macOS).
+#
+#   orchard-ctl session            запуск при входе: обои, эффекты, док, уведомления
+#   orchard-ctl mode light|dark|toggle
+#   orchard-ctl wallpaper ФАЙЛ     (для текущего режима)
+#   orchard-ctl dock size 32..96 | dock hide on|off
+#   orchard-ctl effects on|off
+#   orchard-ctl spotlight          поиск программ (Super+Пробел)
+#   orchard-ctl screenshot full|area
+#   orchard-ctl lock | close | minimize | files | terminal
+#   orchard-ctl settings           окно настроек
+set -u
+
+SHARE="$HOME/.local/share/orchard"
+CONF_DIR="$HOME/.config/orchard"
+CONF="$CONF_DIR/config"
+mkdir -p "$CONF_DIR"
+
+# --- Настройки по умолчанию ---
+MODE=light
+WALL_LIGHT="$SHARE/wallpapers/orchard-light.jpg"
+WALL_DARK="$SHARE/wallpapers/orchard-dark.jpg"
+DOCK_SIZE=48
+DOCK_HIDE=off
+EFFECTS=on
+[ -f "$CONF" ] && . "$CONF"
+
+save_conf() {
+    cat > "$CONF" <<E
+MODE=$MODE
+WALL_LIGHT="$WALL_LIGHT"
+WALL_DARK="$WALL_DARK"
+DOCK_SIZE=$DOCK_SIZE
+DOCK_HIDE=$DOCK_HIDE
+EFFECTS=$EFFECTS
+E
+}
+
+have() { command -v "$1" >/dev/null 2>&1; }
+notify() { have notify-send && notify-send -a Orchard -i "$SHARE/icons/orchard.png" "$1" "${2:-}" 2>/dev/null; }
+
+palette() {  # цвета для rofi/dunst
+    if [ "$MODE" = dark ]; then
+        BG="#2C2C2FF2"; BGALT="#3A3A3E"; FG="#ECECEE"; FGDIM="#8E8E93"; ACCENT="#0A84FF"; BORDER="#48484C"
+        GTK="WhiteSur-Dark"; ICONS="WhiteSur-dark"; ICEWM="Orchard-Dark"; PLANK="Orchard-Dark"
+    else
+        BG="#F6F6F8F2"; BGALT="#E6E6EA"; FG="#1D1D1F"; FGDIM="#8E8E93"; ACCENT="#007AFF"; BORDER="#D1D1D6"
+        GTK="WhiteSur-Light"; ICONS="WhiteSur"; ICEWM="Orchard"; PLANK="Orchard"
+    fi
+    # Если WhiteSur не установлена — стандартные темы
+    [ -d "$HOME/.themes/$GTK" ] || [ -d "/usr/share/themes/$GTK" ] || { [ "$MODE" = dark ] && GTK="Adwaita-dark" || GTK="Adwaita"; }
+    [ -d "$HOME/.local/share/icons/$ICONS" ] || [ -d "/usr/share/icons/$ICONS" ] || ICONS="$(ls /usr/share/icons | grep -m1 -iE 'papirus|adwaita' || echo hicolor)"
+}
+
+fill_template() {  # fill_template ВХОД ВЫХОД
+    sed -e "s|@@BG@@|$BG|g" -e "s|@@BGALT@@|$BGALT|g" -e "s|@@FG@@|$FG|g" -e "s|@@FGDIM@@|$FGDIM|g" \
+        -e "s|@@ACCENT@@|$ACCENT|g" -e "s|@@BORDER@@|$BORDER|g" -e "s|@@ICONS@@|$ICONS|g" "$1" > "$2"
+}
+
+cur_wall() { [ "$MODE" = dark ] && echo "$WALL_DARK" || echo "$WALL_LIGHT"; }
+
+apply_wallpaper() {
+    local w; w="$(cur_wall)"; [ -f "$w" ] || return
+    local L="$HOME/.desktop-session/wallpaper-list.conf" code=""
+    if [ -d "$HOME/.desktop-session" ]; then
+        code="$(cat "$HOME"/.desktop-session/desktop-code.* 2>/dev/null | head -n1)"
+        touch "$L"
+        for k in icewm zzz-icewm rox-icewm space-icewm $code; do
+            grep -q "^$k=" "$L" && sed -i "s|^$k=.*|$k=$w|" "$L" || echo "$k=$w" >> "$L"
+        done
+        [ -f "$HOME/.desktop-session/wallpaper.conf" ] && sed -i 's/^STYLE=.*/STYLE=fill/; s/^TYPE=.*/TYPE=static/' "$HOME/.desktop-session/wallpaper.conf"
+    fi
+    if have desktop-session-wallpaper; then desktop-session-wallpaper >/dev/null 2>&1 &
+    elif have feh; then feh --no-fehbg --bg-fill "$w"; fi
+}
+
+apply_gtk() {
+    local dark=0; [ "$MODE" = dark ] && dark=1
+    mkdir -p "$HOME/.config/gtk-3.0" "$HOME/.icons/default"
+    cat > "$HOME/.config/gtk-3.0/settings.ini" <<E
+[Settings]
+gtk-theme-name=$GTK
+gtk-icon-theme-name=$ICONS
+gtk-cursor-theme-name=WhiteSur-cursors
+gtk-cursor-theme-size=24
+gtk-font-name=Inter 10
+gtk-application-prefer-dark-theme=$dark
+gtk-decoration-layout=close,minimize,maximize:
+gtk-xft-antialias=1
+gtk-xft-hinting=1
+gtk-xft-hintstyle=hintslight
+gtk-xft-rgba=rgb
+E
+    cat > "$HOME/.gtkrc-2.0" <<E
+# Orchard
+gtk-theme-name="$GTK"
+gtk-icon-theme-name="$ICONS"
+gtk-cursor-theme-name="WhiteSur-cursors"
+gtk-font-name="Inter 10"
+E
+    printf '[Icon Theme]\nInherits=WhiteSur-cursors\n' > "$HOME/.icons/default/index.theme"
+    # Живое переключение уже открытых программ через xsettingsd
+    if have xsettingsd; then
+        mkdir -p "$HOME/.config/xsettingsd"
+        cat > "$HOME/.config/xsettingsd/xsettingsd.conf" <<E
+Net/ThemeName "$GTK"
+Net/IconThemeName "$ICONS"
+Gtk/CursorThemeName "WhiteSur-cursors"
+Gtk/FontName "Inter 10"
+Xft/Antialias 1
+Xft/Hinting 1
+Xft/HintStyle "hintslight"
+Xft/RGBA "rgb"
+E
+        pkill -HUP -x xsettingsd 2>/dev/null || (xsettingsd >/dev/null 2>&1 &)
+    fi
+}
+
+apply_icewm() {
+    printf 'Theme="%s/default.theme"\n' "$ICEWM" > "$HOME/.icewm/theme"
+    pgrep -x icewm >/dev/null && (icewm --restart >/dev/null 2>&1 &)
+}
+
+gs() { # gsettings для Plank (с запасным dbus)
+    local s="net.launchpad.plank.dock.settings:/net/launchpad/plank/docks/dock1/"
+    if [ -n "${DBUS_SESSION_BUS_ADDRESS:-}" ]; then gsettings set "$s" "$@" 2>/dev/null
+    else dbus-launch gsettings set "$s" "$@" 2>/dev/null; fi
+}
+
+apply_plank() {
+    have plank || return
+    gs theme "$PLANK"
+    gs icon-size "$DOCK_SIZE"
+    gs zoom-enabled true
+    gs zoom-percent 150
+    gs position bottom
+    gs alignment center
+    [ "$DOCK_HIDE" = on ] && gs hide-mode intelligent || gs hide-mode none
+}
+
+apply_rofi_dunst() {
+    mkdir -p "$HOME/.config/rofi" "$HOME/.config/dunst"
+    fill_template "$SHARE/rofi/orchard.rasi.in" "$HOME/.config/rofi/orchard.rasi"
+    fill_template "$SHARE/dunst/dunstrc.in" "$HOME/.config/dunst/dunstrc"
+    if have dunst; then pkill -x dunst 2>/dev/null; (dunst >/dev/null 2>&1 &); fi
+}
+
+start_effects() {
+    pkill -x picom 2>/dev/null; sleep 0.3
+    [ "$EFFECTS" = on ] && have picom && picom -b --config "$SHARE/picom/orchard.conf" >/dev/null 2>&1
+}
+
+apply_all() {
+    palette
+    apply_gtk
+    apply_rofi_dunst
+    apply_plank
+    apply_wallpaper
+}
+
+case "${1:-}" in
+session)
+    palette
+    xrdb -merge "$HOME/.Xresources" 2>/dev/null
+    apply_gtk; apply_rofi_dunst; apply_wallpaper
+    start_effects
+    apply_plank
+    pgrep -x plank >/dev/null || (sleep 2; plank >/dev/null 2>&1 &) &
+    ;;
+mode)
+    case "${2:-toggle}" in
+        light|dark) MODE="$2" ;;
+        toggle) [ "$MODE" = dark ] && MODE=light || MODE=dark ;;
+        *) echo "mode light|dark|toggle"; exit 1 ;;
+    esac
+    save_conf; apply_all; apply_icewm
+    [ "$MODE" = dark ] && notify "Тёмный режим" || notify "Светлый режим"
+    ;;
+wallpaper)
+    [ -f "${2:-}" ] || { echo "Нет файла: ${2:-}"; exit 1; }
+    f="$(readlink -f "$2")"
+    [ "$MODE" = dark ] && WALL_DARK="$f" || WALL_LIGHT="$f"
+    save_conf; palette; apply_wallpaper
+    ;;
+dock)
+    case "${2:-}" in
+        size) DOCK_SIZE="${3:-48}" ;;
+        hide) DOCK_HIDE="${3:-off}" ;;
+        *) echo "dock size N | dock hide on|off"; exit 1 ;;
+    esac
+    save_conf; palette; apply_plank
+    ;;
+effects)
+    EFFECTS="${2:-on}"; save_conf; start_effects
+    ;;
+spotlight)
+    palette
+    pgrep -x rofi >/dev/null && { pkill -x rofi; exit 0; }
+    rofi -show drun -theme "$HOME/.config/rofi/orchard.rasi"
+    ;;
+screenshot)
+    dir="$(xdg-user-dir PICTURES 2>/dev/null || echo "$HOME/Изображения")"; mkdir -p "$dir"
+    f="$dir/Снимок экрана $(date '+%Y-%m-%d в %H.%M.%S').png"
+    if [ "${2:-full}" = area ]; then
+        if have scrot; then scrot -s -f "$f"; elif have maim; then maim -s "$f"; else import "$f"; fi
+    else
+        if have scrot; then scrot "$f"; elif have maim; then maim "$f"; else import -window root "$f"; fi
+    fi
+    [ -f "$f" ] && notify "Снимок экрана сохранён" "$(basename "$f")"
+    ;;
+lock)
+    for l in slock xlock i3lock xscreensaver-command; do
+        if have "$l"; then
+            case $l in xlock) xlock -mode blank ;; i3lock) i3lock -c 1d1d1f ;; xscreensaver-command) xscreensaver-command -lock ;; *) $l ;; esac
+            exit 0
+        fi
+    done
+    notify "Нет программы блокировки" "sudo apt install slock"
+    ;;
+close)    have wmctrl && wmctrl -c :ACTIVE: ;;
+minimize) have xdotool && xdotool getactivewindow windowminimize ;;
+files)    for f in zzzfm spacefm rox-filer pcmanfm thunar; do have $f && { exec $f "$HOME"; }; done ;;
+terminal) exec x-terminal-emulator ;;
+settings) exec "$HOME/.local/bin/orchard-settings" ;;
+*)
+    sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'
+    ;;
+esac

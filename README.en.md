@@ -7,6 +7,7 @@ Fixes and tools for macOS-style IceWM on antiX Linux.
 - [fix-icewm-buttons.sh](#fix-icewm-buttonssh--black-bar-under-the-window-buttons): removes the black bar under the window buttons
 - [brightness/](brightness/README.en.md): a brightness slider button and everything about screen brightness
 - [BROWSER.en.md](BROWSER.en.md): which browser to install so it doesn't eat all your RAM
+- [orchard/](orchard/README.en.md): **new macOS-style Orchard theme** — windows, bar, dock, wallpapers, dark mode
 - [apps/](apps/README.en.md): installing Zoom and Throne
 
 ## fix-icewm-buttons.sh — black bar under the window buttons

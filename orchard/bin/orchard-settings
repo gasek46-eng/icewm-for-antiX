@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# orchard-settings — окно «Настройки Orchard» (yad).
+CTL="$HOME/.local/bin/orchard-ctl"
+CONF="$HOME/.config/orchard/config"
+ICON="$HOME/.local/share/orchard/icons/orchard-settings.png"
+MODE=light; DOCK_SIZE=48; DOCK_HIDE=off; EFFECTS=on
+[ -f "$CONF" ] && . "$CONF"
+
+mode_list() { [ "$MODE" = dark ] && echo "Тёмный!Светлый" || echo "Светлый!Тёмный"; }
+b() { [ "$1" = on ] && echo TRUE || echo FALSE; }
+
+OUT=$(yad --form --title="Настройки Orchard" --window-icon="$ICON" --image="$ICON" \
+    --text="<b>Оформление в стиле macOS</b>" --center --width=440 --borders=14 \
+    --field="Режим:CB" "$(mode_list)" \
+    --field="Обои:FL" "" \
+    --field="Размер значков дока:NUM" "$DOCK_SIZE!32..96!4" \
+    --field="Прятать док, когда мешает:CHK" "$(b "$DOCK_HIDE")" \
+    --field="Тени и скругления (эффекты):CHK" "$(b "$EFFECTS")" \
+    --field="Яркость экрана:FBTN" "bash -c 'command -v brightness-slider >/dev/null && brightness-slider || $HOME/.local/bin/brightness-slider'" \
+    --field="Удалить тему Orchard…:FBTN" "x-terminal-emulator -e bash -c '$HOME/.local/share/orchard/install.sh --remove; read -p Enter'" \
+    --button="Отмена:1" --button="Применить:0" 2>/dev/null) || exit 0
+
+IFS='|' read -r m wall size hide eff _ <<<"$OUT"
+[ "$m" = "Тёмный" ] && NEW=dark || NEW=light
+size=${size%%[.,]*}
+[ "$size" != "$DOCK_SIZE" ] && "$CTL" dock size "$size"
+h=off; [ "$hide" = TRUE ] && h=on; [ "$h" != "$DOCK_HIDE" ] && "$CTL" dock hide "$h"
+e=off; [ "$eff" = TRUE ] && e=on; [ "$e" != "$EFFECTS" ] && "$CTL" effects "$e"
+[ "$NEW" != "$MODE" ] && "$CTL" mode "$NEW"
+[ -n "$wall" ] && [ -f "$wall" ] && "$CTL" wallpaper "$wall"
+exit 0

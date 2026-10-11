@@ -1,0 +1,90 @@
+/* Orchard — поиск программ в стиле Spotlight (rofi).
+ * Цвета подставляет orchard-ctl из светлой или тёмной палитры: @@BG@@ и т.д.
+ */
+configuration {
+    show-icons:          true;
+    icon-theme:          "@@ICONS@@";
+    display-drun:        "";
+    drun-display-format: "{name}";
+    font:                "Inter 12";
+    matching:            "fuzzy";
+    sort:                true;
+    disable-history:     false;
+}
+
+* {
+    bg:        @@BG@@;
+    bg-alt:    @@BGALT@@;
+    fg:        @@FG@@;
+    fg-dim:    @@FGDIM@@;
+    accent:    @@ACCENT@@;
+    border-c:  @@BORDER@@;
+    background-color: transparent;
+    text-color:       @fg;
+}
+
+window {
+    location:         north;
+    anchor:           north;
+    y-offset:         22%;
+    width:            620px;
+    background-color: @bg;
+    border:           1px;
+    border-color:     @border-c;
+    border-radius:    14px;
+    padding:          10px;
+}
+
+mainbox {
+    spacing:  8px;
+    children: [ inputbar, listview ];
+}
+
+inputbar {
+    padding:          10px 12px;
+    spacing:          10px;
+    border-radius:    10px;
+    background-color: @bg-alt;
+    children:         [ prompt, entry ];
+}
+
+prompt {
+    str:        "⌕";
+    font:       "Inter 15";
+    text-color: @fg-dim;
+}
+
+entry {
+    placeholder:       "Поиск программ";
+    placeholder-color: @fg-dim;
+    font:              "Inter 15";
+    cursor:            text;
+}
+
+listview {
+    lines:        7;
+    columns:      1;
+    fixed-height: false;
+    scrollbar:    false;
+    spacing:      2px;
+}
+
+element {
+    padding:       7px 10px;
+    spacing:       12px;
+    border-radius: 8px;
+}
+
+element selected {
+    background-color: @accent;
+    text-color:       #FFFFFF;
+}
+
+element-icon {
+    size: 28px;
+}
+
+element-text {
+    vertical-align: 0.5;
+    text-color:     inherit;
+}

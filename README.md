@@ -7,6 +7,7 @@
 - [fix-icewm-buttons.sh](#fix-icewm-buttonssh--чёрная-полоса-под-кнопками-окна): убирает чёрную полосу под кнопками окна
 - [brightness/](brightness/README.md): кнопка с ползунком яркости и всё про яркость экрана
 - [BROWSER.md](BROWSER.md): какой браузер поставить, чтобы не забивал память
+- [orchard/](orchard/README.md): **новая тема Orchard в стиле macOS** — окна, панель, док, обои, тёмный режим
 - [apps/](apps/README.md): установка Zoom и Throne
 
 ## fix-icewm-buttons.sh — чёрная полоса под кнопками окна
