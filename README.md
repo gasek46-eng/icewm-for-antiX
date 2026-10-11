@@ -2,7 +2,10 @@
 
 **Русский** | [English](README.en.md)
 
-Исправления для тем IceWM в стиле macOS на antiX Linux.
+Исправления и утилиты для IceWM в стиле macOS на antiX Linux.
+
+- [fix-icewm-buttons.sh](#fix-icewm-buttonssh--чёрная-полоса-под-кнопками-окна): убирает чёрную полосу под кнопками окна
+- [brightness/](#brightness--кнопка-яркости): кнопка с ползунком яркости экрана
 
 ## fix-icewm-buttons.sh — чёрная полоса под кнопками окна
 
@@ -63,3 +66,37 @@ icewm --restart &
 ### Проверено
 
 - antiX 26.1 (x64), IceWM, тема `macOS-antiX`, кнопки 20×28 → 20×56.
+
+## brightness/ — кнопка яркости
+
+![Окно регулировки яркости](brightness/preview.png)
+
+Значок солнца на верхней панели IceWM и в доке Plank. Нажмите на него, и появится
+ползунок: яркость меняется сразу, пока вы его двигаете. Заодно настраиваются клавиши
+**Fn+F9 / Fn+F10** (темнее / ярче на 10%) и появляется пункт «Яркость» в меню.
+
+Минимум ползунка 5%, чтобы экран нельзя было случайно погасить полностью.
+
+### Установка
+
+```bash
+cd ~/Загрузки
+git clone https://github.com/gasek46-eng/icewm-for-antix
+bash icewm-for-antix/brightness/install-brightness-button.sh
+```
+
+Без git: скачайте архив репозитория (Code → Download ZIP), распакуйте его и запустите
+`install-brightness-button.sh` из папки `brightness`.
+
+Запускайте **без `sudo`**. Скрипт сам:
+- поставит `yad` и `brightnessctl`, если их нет (спросит пароль);
+- добавит пользователя в группу `video`. После первой установки **выйдите из сеанса
+  и войдите снова**, иначе яркость меняться не будет.
+
+Повторный запуск безопасен: ничего не задвоится.
+
+### Удаление
+
+```bash
+bash icewm-for-antix/brightness/install-brightness-button.sh --remove
+```

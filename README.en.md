@@ -2,7 +2,10 @@
 
 [Русский](README.md) | **English**
 
-Fixes for macOS-style IceWM themes on antiX Linux.
+Fixes and tools for macOS-style IceWM on antiX Linux.
+
+- [fix-icewm-buttons.sh](#fix-icewm-buttonssh--black-bar-under-the-window-buttons): removes the black bar under the window buttons
+- [brightness/](#brightness--brightness-button): a button with a screen brightness slider
 
 ## fix-icewm-buttons.sh — black bar under the window buttons
 
@@ -66,3 +69,37 @@ icewm --restart &
 ### Tested on
 
 - antiX 26.1 (x64), IceWM, `macOS-antiX` theme, buttons 20×28 → 20×56.
+
+## brightness/ — brightness button
+
+![Brightness window](brightness/preview.png)
+
+A sun icon on the IceWM top panel and in the Plank dock. Click it to get a slider:
+brightness changes live as you drag it. The installer also sets up
+**Fn+F9 / Fn+F10** (10% darker / brighter) and adds a "Brightness" menu entry.
+
+The slider stops at 5%, so the screen can't be turned fully dark by accident.
+
+### Install
+
+```bash
+cd ~/Downloads
+git clone https://github.com/gasek46-eng/icewm-for-antix
+bash icewm-for-antix/brightness/install-brightness-button.sh
+```
+
+Without git: download the repository archive (Code → Download ZIP), unpack it and run
+`install-brightness-button.sh` from the `brightness` folder.
+
+Run it **without `sudo`**. The script will:
+- install `yad` and `brightnessctl` if they are missing (asks for your password);
+- add your user to the `video` group. After the first install, **log out and back in**,
+  otherwise brightness won't change.
+
+Running it again is safe: nothing gets duplicated. The script's messages are in Russian.
+
+### Remove
+
+```bash
+bash icewm-for-antix/brightness/install-brightness-button.sh --remove
+```
