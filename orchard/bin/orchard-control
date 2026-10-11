@@ -1,0 +1,115 @@
+#!/usr/bin/env bash
+# orchard-control — «Пункт управления» в стиле macOS:
+# яркость, громкость, Wi-Fi, раскладка, тёмный режим, док, эффекты.
+#   orchard-control            открыть окно
+#   orchard-control slider brightness|volume
+#   orchard-control bright +10|-10   /   vol +5|-5|mute
+set -u
+SHARE="$HOME/.local/share/orchard"
+CTL="$HOME/.local/bin/orchard-ctl"
+ICON="$SHARE/icons/orchard-control.png"
+have() { command -v "$1" >/dev/null 2>&1; }
+
+# ---------- яркость ----------
+bri_get() {
+    if have brightnessctl; then echo $(( $(brightnessctl get) * 100 / $(brightnessctl max) )); return; fi
+    local d; d=$(ls -d /sys/class/backlight/* 2>/dev/null | head -n1); [ -n "$d" ] || { echo 100; return; }
+    echo $(( $(cat "$d/brightness") * 100 / $(cat "$d/max_brightness") ))
+}
+bri_set() {
+    local p=$1; [ "$p" -lt 5 ] && p=5; [ "$p" -gt 100 ] && p=100
+    have brightnessctl && brightnessctl -q set "${p}%"
+}
+# ---------- громкость ----------
+vol_get() {
+    if have pactl && pactl info >/dev/null 2>&1; then
+        pactl get-sink-volume @DEFAULT_SINK@ | grep -o '[0-9]*%' | head -n1 | tr -d %
+    else amixer get Master 2>/dev/null | grep -o '[0-9]*%' | head -n1 | tr -d %; fi
+}
+vol_set() {
+    local p=$1; [ "$p" -lt 0 ] && p=0; [ "$p" -gt 100 ] && p=100
+    if have pactl && pactl info >/dev/null 2>&1; then pactl set-sink-volume @DEFAULT_SINK@ "${p}%"; pactl set-sink-mute @DEFAULT_SINK@ 0
+    else amixer -q set Master "${p}%" unmute; fi
+}
+vol_mute() {
+    if have pactl && pactl info >/dev/null 2>&1; then pactl set-sink-mute @DEFAULT_SINK@ toggle
+    else amixer -q set Master toggle; fi
+}
+# ---------- Wi-Fi ----------
+wifi_name() {
+    local n=""
+    have iwgetid && n=$(iwgetid -r 2>/dev/null)
+    [ -z "$n" ] && have nmcli && n=$(nmcli -t -f active,ssid dev wifi 2>/dev/null | grep '^yes' | cut -d: -f2)
+    [ -z "$n" ] && have connmanctl && n=$(connmanctl services 2>/dev/null | grep -m1 '^\*A[OR]' | awk '{$1="";print}' | sed 's/ wifi_.*//;s/^ //')
+    echo "${n:-не подключено}"
+}
+wifi_toggle() {
+    if have connmanctl; then
+        connmanctl technologies 2>/dev/null | grep -A3 '/wifi' | grep -q 'Powered = True' && connmanctl disable wifi || connmanctl enable wifi
+    elif have nmcli; then
+        [ "$(nmcli radio wifi)" = enabled ] && nmcli radio wifi off || nmcli radio wifi on
+    elif have rfkill; then
+        rfkill list wifi | grep -q 'Soft blocked: yes' && rfkill unblock wifi || rfkill block wifi
+    fi
+}
+wifi_gui() { for g in cmst connman-gtk nm-connection-editor ceni; do have $g && { $g & return; }; done
+             have x-terminal-emulator && x-terminal-emulator -e sudo ceni & }
+# ---------- раскладка ----------
+kb_get() { have xkb-switch && { xkb-switch; return; }; setxkbmap -query | awk '/layout/{split($2,a,",");print a[1]}'; }
+kb_set() { # ставим выбранный язык первым, второй остаётся для Alt+Shift
+    local opt; opt=$(setxkbmap -query | awk '/options/{print $2}')
+    [ "$1" = ru ] && setxkbmap -layout ru,us ${opt:+-option "$opt"} || setxkbmap -layout us,ru ${opt:+-option "$opt"}
+}
+
+# ---------- окно-ползунок ----------
+slider() {
+    local what=$1 cur title img
+    if [ "$what" = volume ]; then cur=$(vol_get); title="Громкость"; img=audio-volume-high
+    else cur=$(bri_get); title="Яркость"; img="$HOME/.local/share/icons/hicolor/48x48/apps/brightness-slider.png"; [ -f "$img" ] || img=display-brightness; fi
+    yad --scale --title="$title" --window-icon="$ICON" --image="$img" --text="<b>$title</b>" \
+        --min-value=$([ "$what" = volume ] && echo 0 || echo 5) --max-value=100 --step=5 --value="${cur:-50}" \
+        --print-partial --mouse --on-top --skip-taskbar --fixed --width=320 --button="Готово:0" 2>/dev/null |
+    while read -r v; do v=${v%%.*}; [[ "$v" =~ ^[0-9]+$ ]] || continue
+        [ "$what" = volume ] && vol_set "$v" || bri_set "$v"; done
+}
+
+case "${1:-}" in
+slider) slider "${2:-brightness}"; exit 0 ;;
+wifi-toggle) wifi_toggle; exit 0 ;;
+wifi-gui)    wifi_gui; exit 0 ;;
+bright) c=$(bri_get); bri_set $(( c + ${2:-10} )); exit 0 ;;
+vol)    if [ "${2:-}" = mute ]; then vol_mute; else c=$(vol_get); vol_set $(( ${c:-50} + ${2:-5} )); fi; exit 0 ;;
+esac
+
+# ---------- главное окно ----------
+LOCK="${XDG_RUNTIME_DIR:-/tmp}/orchard-control.$(id -un)"
+exec 9>"$LOCK"; flock -n 9 || exit 0
+CONF="$HOME/.config/orchard/config"; MODE=light; DOCK_HIDE=off; EFFECTS=on
+[ -f "$CONF" ] && . "$CONF"
+b() { [ "$1" = on ] || [ "$1" = dark ] && echo TRUE || echo FALSE; }
+KB=$(kb_get); [ "$KB" = ru ] && KBL="Русская!English" || KBL="English!Русская"
+SELF="$(readlink -f "$0")"
+BV=$(bri_get); VV=$(vol_get); VV=${VV:-—}
+
+OUT=$(yad --form --title="Пункт управления" --window-icon="$ICON" --image="$ICON" \
+    --text="<b>Пункт управления</b>" --mouse --on-top --skip-taskbar --width=380 --borders=12 --columns=1 \
+    --field="Wi-Fi:  $(wifi_name):LBL" "" \
+    --field="  Включить / выключить Wi-Fi:FBTN" "bash -c '$SELF wifi-toggle'" \
+    --field="  Выбрать сеть…:FBTN" "bash -c '$SELF wifi-gui'" \
+    --field="Яркость  ($BV%)…:FBTN" "bash -c '$SELF slider brightness'" \
+    --field="Громкость  ($VV%)…:FBTN" "bash -c '$SELF slider volume'" \
+    --field="  Выключить / включить звук:FBTN" "bash -c '$SELF vol mute'" \
+    --field="Раскладка:CB" "$KBL" \
+    --field="Тёмный режим:CHK" "$(b "$MODE")" \
+    --field="Прятать док:CHK" "$(b "$DOCK_HIDE")" \
+    --field="Эффекты (тени, скругления):CHK" "$(b "$EFFECTS")" \
+    --field="Все настройки Orchard…:FBTN" "bash -c '$HOME/.local/bin/orchard-settings &'" \
+    --button="Готово:0" 2>/dev/null) || exit 0
+
+IFS='|' read -r _ _ _ _ _ _ kb dark hide eff _ <<<"$OUT"
+[ "$kb" = "Русская" ] && [ "$KB" != ru ] && kb_set ru
+[ "$kb" = "English" ] && [ "$KB" = ru ] && kb_set us
+[ "$dark" = TRUE ] && NM=dark || NM=light; [ "$NM" != "$MODE" ] && "$CTL" mode "$NM"
+h=off; [ "$hide" = TRUE ] && h=on; [ "$h" != "$DOCK_HIDE" ] && "$CTL" dock hide "$h"
+e=off; [ "$eff" = TRUE ] && e=on; [ "$e" != "$EFFECTS" ] && "$CTL" effects "$e"
+exit 0

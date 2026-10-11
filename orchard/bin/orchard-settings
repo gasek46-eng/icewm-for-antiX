@@ -16,7 +16,7 @@ OUT=$(yad --form --title="Настройки Orchard" --window-icon="$ICON" --im
     --field="Размер значков дока:NUM" "$DOCK_SIZE!32..96!4" \
     --field="Прятать док, когда мешает:CHK" "$(b "$DOCK_HIDE")" \
     --field="Тени и скругления (эффекты):CHK" "$(b "$EFFECTS")" \
-    --field="Яркость экрана:FBTN" "bash -c 'command -v brightness-slider >/dev/null && brightness-slider || $HOME/.local/bin/brightness-slider'" \
+    --field="Яркость экрана:FBTN" "bash -c '$HOME/.local/bin/orchard-control slider brightness'" \
     --field="Удалить тему Orchard…:FBTN" "x-terminal-emulator -e bash -c '$HOME/.local/share/orchard/install.sh --remove; read -p Enter'" \
     --button="Отмена:1" --button="Применить:0" 2>/dev/null) || exit 0
 

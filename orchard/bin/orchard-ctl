@@ -167,6 +167,10 @@ session)
     start_effects
     apply_plank
     pgrep -x plank >/dev/null || (sleep 2; plank >/dev/null 2>&1 &) &
+    # значок «Пункта управления» в трее (справа на панели)
+    pkill -f "yad --notification.*orchard-control" 2>/dev/null
+    have yad && (sleep 3; yad --notification --image="$SHARE/icons/orchard-control.png" \
+        --text="Пункт управления" --command="$HOME/.local/bin/orchard-control" >/dev/null 2>&1 &) &
     ;;
 mode)
     case "${2:-toggle}" in

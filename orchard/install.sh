@@ -50,7 +50,7 @@ if [ "${1:-}" = "--remove" ]; then
     fi
     rm -rf "$HOME/.icewm/themes/Orchard" "$HOME/.icewm/themes/Orchard-Dark" "$HOME/.local/share/plank/themes/Orchard" \
            "$HOME/.local/share/plank/themes/Orchard-Dark" "$HOME/.config/orchard" \
-           "$BIN/orchard-ctl" "$BIN/orchard-settings" "$HOME/.local/share/applications/orchard-settings.desktop"
+           "$BIN/orchard-ctl" "$BIN/orchard-settings" "$BIN/orchard-control" "$HOME/.local/share/applications/orchard-settings.desktop"
     rm -rf "$SHARE"
     (plank >/dev/null 2>&1 &)
     pgrep -x icewm >/dev/null && (icewm --restart >/dev/null 2>&1 &)
@@ -66,7 +66,8 @@ have icewm || die "IceWM не найден — тема рассчитана н�
 # --------------------------------------------------------------------- 1
 step "1/8 Пакеты (нужен пароль)"
 PKGS="picom plank rofi dunst feh yad wmctrl xdotool scrot xsettingsd libnotify-bin x11-xserver-utils dconf-cli
-      fonts-inter fonts-jetbrains-mono git sassc libglib2.0-dev-bin libxml2-utils"
+      fonts-inter fonts-jetbrains-mono git sassc libglib2.0-dev-bin libxml2-utils
+      brightnessctl alsa-utils pulseaudio-utils rfkill wireless-tools"
 sudo apt-get update -qq || warn "apt update с ошибкой — продолжаю"
 for p in $PKGS; do
     dpkg -s "$p" >/dev/null 2>&1 && continue
@@ -100,6 +101,9 @@ cp -a "$HERE/install.sh" "$SHARE/install.sh"
 mkdir -p "$SHARE/src"; cp -a "$HERE"/{icewm,plank,bin,fontconfig} "$SHARE/src/" 2>/dev/null
 install -m 755 "$HERE/bin/orchard-ctl" "$BIN/orchard-ctl"
 install -m 755 "$HERE/bin/orchard-settings" "$BIN/orchard-settings"
+install -m 755 "$HERE/bin/orchard-control" "$BIN/orchard-control"
+# право менять яркость без пароля
+if ! id -nG "$USER" | tr ' ' '\n' | grep -qx video; then sudo usermod -aG video "$USER" && info "Добавил $USER в группу video (яркость)"; fi
 mkdir -p "$HOME/.local/share/applications"
 cat > "$HOME/.local/share/applications/orchard-settings.desktop" <<E
 [Desktop Entry]
@@ -207,6 +211,12 @@ key "Super+l"           $C lock
 key "Super+Shift+3"     $C screenshot full
 key "Super+Shift+4"     $C screenshot area
 key "Print"             $C screenshot full
+key "Super+c"           $BIN/orchard-control
+key "XF86MonBrightnessUp"   $BIN/orchard-control bright +10
+key "XF86MonBrightnessDown" $BIN/orchard-control bright -10
+key "XF86AudioRaiseVolume"  $BIN/orchard-control vol +5
+key "XF86AudioLowerVolume"  $BIN/orchard-control vol -5
+key "XF86AudioMute"         $BIN/orchard-control vol mute
 $M2
 E
 # Строка меню без значков быстрого запуска — программы живут в доке
@@ -272,7 +282,9 @@ echo "  Super+Shift+D  светлый ↔ тёмный режим"
 echo "  Super+Q / M    закрыть / свернуть окно"
 echo "  Super+Shift+3 / 4   снимок экрана / области (в «Изображения»)"
 echo "  Super+L        заблокировать экран"
+echo "  Super+C        Пункт управления (яркость, звук, Wi-Fi, язык) — или значок в трее"
 echo
-echo " Выйдите из сеанса и войдите снова — так всё применится полностью."
+echo " Выйдите из сеанса и войдите снова — так всё применится полностью"
+echo " (в том числе право менять яркость)."
 echo " Удалить и вернуть как было:  bash $SHARE/install.sh --remove"
 echo "================================================================"

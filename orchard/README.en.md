@@ -15,6 +15,7 @@ notifications, light and dark mode. No Apple logos; all artwork is original.
 - **Plank dock** at the bottom with zoom; running apps show in the dock.
 - **App search** (Super+Space) and **notifications** at the top right.
 - **Light and dark mode**, each with its own wallpaper; toggle with Super+Shift+D.
+- **Control Center** (tray icon or Super+C): brightness, volume, Wi-Fi, keyboard layout, dark mode. Brightness and volume keys work out of the box.
 - **Orchard Settings** (Super+,): mode, wallpaper, dock size and autohide, effects, brightness.
 - **Fonts**: Inter and JetBrains Mono with crisp antialiasing.
 - **WhiteSur** app themes, icons and cursors (downloaded during install).
@@ -44,6 +45,7 @@ The installer makes a backup, disables Conky and other picom/plank autostarts
 | Super+E / Super+T | files / terminal |
 | Super+Shift+3 / 4, Print | screenshot / area |
 | Super+L | lock screen |
+| Super+C | Control Center |
 | Alt+Tab | switch windows |
 
 From a terminal: `orchard-ctl mode dark`, `orchard-ctl wallpaper ~/picture.jpg`,
