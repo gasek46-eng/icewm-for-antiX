@@ -104,7 +104,8 @@ OUT=$(yad --form --title="Пункт управления" --window-icon="$ICON"
     --field="Прятать док:CHK" "$(b "$DOCK_HIDE")" \
     --field="Эффекты (тени, скругления):CHK" "$(b "$EFFECTS")" \
     --field="Все настройки Orchard…:FBTN" "bash -c '$HOME/.local/bin/orchard-settings &'" \
-    --button="Готово:0" 2>/dev/null) || exit 0
+    --button="Готово:0" 2>/dev/null 9>&-) || exit 0
+exec 9>&-   # снять «замок» до запуска фоновых программ, иначе они его унаследуют
 
 IFS='|' read -r _ _ _ _ _ _ kb dark hide eff _ <<<"$OUT"
 [ "$kb" = "Русская" ] && [ "$KB" != ru ] && kb_set ru
